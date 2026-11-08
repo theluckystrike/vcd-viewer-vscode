@@ -4,7 +4,10 @@
 // (which blocks hold changes of which signal), then again, block by block, only for the signals you add.
 // Nothing here keeps all value changes of a file in memory.
 
+const { ValuesBuilder } = require('./packed');
 const CODE_CHARS = '01xzuwlh-';
+// Widest signal the viewer draws. A wider declared width (a hostile 2^31-bit $var) is read as this many bits.
+const MAX_WIDTH = 1 << 20;
 // byte -> scalar value code (0..8), -1 when the byte does not start a scalar change
 const SCALAR = new Int8Array(256).fill(-1);
 for (let i = 0; i < CODE_CHARS.length; i++) {
@@ -92,6 +95,7 @@ function parseHeader(text) {
         const code = a[2];
         const name = a.slice(3).join('');
         if (!(size >= 1)) { warn('size', `Signal ${name} has an unknown size "${a[1]}". It is read as 1 bit.`); size = 1; }
+        else if (size > MAX_WIDTH) { warn('size', `Signal ${name} declares ${a[1]} bits. It is read as ${MAX_WIDTH} bits, the widest this viewer shows.`); size = MAX_WIDTH; }
         const kind = REAL_TYPES.has(type) ? 'real' : type === 'string' ? 'string' : (size === 1 || type === 'event') ? 'scalar' : 'vector';
         let id = idMap.get(code);
         if (id === undefined) {
@@ -332,7 +336,9 @@ class LoadSink {
     this.want = new Int32Array(ids.length).fill(-1);
     this.slots = want.map((id, k) => {
       this.want[id] = k;
-      return { id, kind: ids[id].kind, size: ids[id].size, times: [], vals: [] };
+      const kind = ids[id].kind;
+      // bus and string values go into one byte buffer (core/packed.js), not one JS string per change
+      return { id, kind, size: ids[id].size, times: [], vals: kind === 'scalar' || kind === 'real' ? [] : null, vb: kind === 'scalar' || kind === 'real' ? null : new ValuesBuilder() };
     });
   }
   scalar(id, code, t) {
@@ -341,9 +347,8 @@ class LoadSink {
     const s = this.slots[k];
     s.times.push(t);
     if (s.kind === 'scalar') s.vals.push(code);
-    else if (s.kind === 'vector') s.vals.push(CODE_CHARS[code]);
     else if (s.kind === 'real') s.vals.push(NaN);
-    else s.vals.push(CODE_CHARS[code]);
+    else s.vb.pushString(CODE_CHARS[code]);
   }
   vector(id, buf, a, b, t) {
     const k = this.want[id];
@@ -352,7 +357,7 @@ class LoadSink {
     s.times.push(t);
     if (s.kind === 'scalar') { const c = SCALAR[buf[b - 1]]; s.vals.push(c < 0 ? 2 : c); }
     else if (s.kind === 'real') s.vals.push(parseInt(latin1(buf, a, b), 2));
-    else s.vals.push(latin1(buf, a, b).toLowerCase());
+    else s.vb.pushBytes(buf, a, b, true);
   }
   real(id, buf, a, b, t) {
     const k = this.want[id];
@@ -362,7 +367,7 @@ class LoadSink {
     const v = parseFloat(latin1(buf, a, b));
     if (s.kind === 'real') s.vals.push(v);
     else if (s.kind === 'scalar') s.vals.push(2);
-    else s.vals.push(String(v));
+    else s.vb.pushString(String(v));
   }
   str(id, buf, a, b, t) {
     const k = this.want[id];
@@ -371,15 +376,16 @@ class LoadSink {
     s.times.push(t);
     if (s.kind === 'scalar') s.vals.push(2);
     else if (s.kind === 'real') s.vals.push(NaN);
-    else s.vals.push(latin1(buf, a, b));
+    else s.vb.pushBytes(buf, a, b, false);
   }
-  /** Packs the result for postMessage: times as Float64Array, scalar codes as Uint8Array, reals as Float64Array. */
+  /** Packs the result for postMessage: times as Float64Array, scalar codes as Uint8Array, reals as Float64Array,
+   * bus and string values as {vbytes, vends} (see core/packed.js). Every part is a transferable buffer. */
   result() {
     return this.slots.map(s => {
       const times = Float64Array.from(s.times);
       if (s.kind === 'scalar') return { id: s.id, kind: s.kind, size: s.size, times, codes: Uint8Array.from(s.vals) };
       if (s.kind === 'real') return { id: s.id, kind: s.kind, size: s.size, times, reals: Float64Array.from(s.vals) };
-      return { id: s.id, kind: s.kind, size: s.size, times, values: s.vals };
+      return { id: s.id, kind: s.kind, size: s.size, times, ...s.vb.finish() };
     });
   }
 }

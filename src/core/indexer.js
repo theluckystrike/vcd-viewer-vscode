@@ -133,7 +133,7 @@ function rangesFor(index, ids, maxRange = 8 * 1024 * 1024) {
   return out;
 }
 
-/** Scans the ranges and returns the changes of the wanted ids: [{id, kind, size, times, codes|reals|values}]. */
+/** Scans the ranges and returns the changes of the wanted ids: [{id, kind, size, times, codes|reals|vbytes+vends}]. */
 function scanRanges(reader, headerIds, want, ranges, progress) {
   const sink = new V.LoadSink(headerIds, want);
   const lookup = V.buildLookup(headerIds);
@@ -181,14 +181,21 @@ function mergeResults(parts) {
     const r = { id: first.id, kind: first.kind, size: first.size, times: cat('times', Float64Array) };
     if (first.codes) r.codes = cat('codes', Uint8Array);
     else if (first.reals) r.reals = cat('reals', Float64Array);
-    else r.values = [].concat(...list.map(s => s.values));
+    else {
+      // bus and string values: join the byte buffers and shift the end offsets of each later part
+      r.vbytes = cat('vbytes', Uint8Array);
+      const ends = new Uint32Array(list.reduce((a, s) => a + s.vends.length, 0));
+      let o = 0, base = 0;
+      for (const s of list) { for (let k = 0; k < s.vends.length; k++) ends[o++] = s.vends[k] + base; base += s.vbytes.length; }
+      r.vends = ends;
+    }
     return r;
   });
 }
 
 /**
  * Loads all changes of the given id codes. Reads only the blocks that hold them.
- * Returns [{id, kind, size, times, codes|reals|values}] in the order of ids.
+ * Returns [{id, kind, size, times, codes|reals|vbytes+vends}] in the order of ids.
  */
 function loadSignals(reader, header, index, ids, progress) {
   return scanRanges(reader, header.ids, ids, rangesFor(index, ids), progress);

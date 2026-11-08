@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1
+
+- Busy buses in big files load faster and use less memory. Bus and string values now travel from the reader to the view as packed bytes instead of one text item per change. A 400 MB file with a 32-bit counter that changes every nanosecond (11 million changes) shows in about 5 s instead of 23 s, and VS Code stays responsive when you open and close it many times.
+- A signal declared wider than 1,048,576 bits is read as 1,048,576 bits, with a note. Before, a file that declared 2,147,483,647 bits left that signal at "loading".
+- Files with thousands of nested scopes open without an error in the signal tree.
+
 ## 0.1.0
 
 - First release. Opens `.vcd` files from Icarus Verilog, Verilator, Vivado, ModelSim and GHDL as waveforms, with no signal limit.

@@ -8,6 +8,7 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 const X = require('../src/core/indexer');
 const V = require('../src/core/vcd');
+const { packedValues } = require('../src/core/packed');
 
 const ROOT = path.join(__dirname, '..');
 const DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'vcd-samples-'));
@@ -28,7 +29,7 @@ function valueAt(sig, t) {
   if (i < 0) return null;
   if (sig.codes) return V.CODE_CHARS[sig.codes[i]];
   if (sig.reals) return Number.isNaN(sig.reals[i]) ? 'nan' : sig.reals[i];
-  return sig.values[i];
+  return packedValues(sig).at(i);
 }
 const same = (a, b) => (typeof b === 'number' ? Math.abs(a - b) <= 1e-9 * Math.max(1, Math.abs(b)) : a === b);
 
@@ -66,7 +67,8 @@ test('parallel parts merge to the same result as one pass', () => {
   const merged = X.mergeResults(parts);
   for (let i = 0; i < one.length; i++) {
     assert.deepStrictEqual(Array.from(merged[i].times), Array.from(one[i].times));
-    assert.deepStrictEqual(merged[i].codes ? Array.from(merged[i].codes) : merged[i].values, one[i].codes ? Array.from(one[i].codes) : one[i].values);
+    const vals = s => (s.codes ? Array.from(s.codes) : s.reals ? Array.from(s.reals) : packedValues(s).toArray());
+    assert.deepStrictEqual(vals(merged[i]), vals(one[i]));
   }
 });
 
@@ -107,4 +109,37 @@ test('header: timescales, scopes reopened, bit ranges, real and string kinds', (
   const h = V.parseHeader('$scope module a $end $var wire 8 # d [7:0] $end $upscope $end $scope module a $end $var real 1 $ r $end $var string 1 % s $end $upscope $end $enddefinitions $end');
   assert.strictEqual(h.scopes.length, 2);
   assert.deepStrictEqual(h.vars.map(v => [v.path, v.kind, v.msb, v.lsb]), [['a.d[7:0]', 'vector', 7, 0], ['a.r', 'real', undefined, undefined], ['a.s', 'string', undefined, undefined]]);
+});
+
+test('a declared width over 2^20 bits is read as 2^20 bits, with a note', () => {
+  const src = '$timescale 1ns $end\n$scope module t $end\n$var wire 2147483647 ! big $end\n$var wire 8 " ok $end\n$upscope $end\n$enddefinitions $end\n#0\nb1 !\nb101 "\n#5\nbx !\n';
+  const r = X.bufferReader(Buffer.from(src, 'latin1'));
+  const h = X.readHeader(r);
+  const big = h.header.vars.find(v => v.path === 't.big');
+  assert.strictEqual(big.size, 1 << 20);
+  assert.strictEqual(h.header.vars.find(v => v.path === 't.ok').size, 8);
+  assert.ok(JSON.stringify(h.header).includes('2147483647'), 'the note names the declared width');
+});
+
+test('bus values are packed into bytes and read back the same, also across parallel parts', () => {
+  const lines = ['$timescale 1ns $end', '$scope module t $end', '$var wire 1 ! clk $end', '$var wire 32 " cnt $end', '$var string 1 # s $end', '$upscope $end', '$enddefinitions $end'];
+  for (let t = 0; t < 3000; t++) lines.push(`#${t}`, `${t & 1}!`, `b${t.toString(2)} "`, t % 7 ? `b${t % 3 ? 'X1Z0' : '10'} "` : `sname_${t} #`);
+  const src = lines.join('\n') + '\n';
+  const r = X.bufferReader(Buffer.from(src, 'latin1'));
+  const h = X.readHeader(r);
+  const ix = X.buildIndex(r, h.header, h.bodyStart, null, { blockSize: 4096 });
+  const ids = h.header.ids.map((_, i) => i);
+  const one = X.loadSignals(r, h.header, ix, ids);
+  const cnt = one.find(s => s.kind === 'vector'), str = one.find(s => s.kind === 'string');
+  assert.ok(cnt.vbytes instanceof Uint8Array && cnt.vends instanceof Uint32Array && !('values' in cnt));
+  const cv = packedValues(cnt);
+  assert.strictEqual(cv.length, cnt.times.length);
+  assert.strictEqual(cv.at(0), '0');
+  assert.strictEqual(cv.at(-1), cv.at(cv.length - 1));
+  assert.ok(cv.toArray().includes('x1z0'), 'vector values are lower-cased as before');
+  assert.strictEqual(packedValues(str).at(0), 'name_0');
+  const parts = X.splitRanges(X.rangesFor(ix, ids, 4096), 4).map(p => X.scanRanges(r, h.header.ids, ids, p));
+  const merged = X.mergeResults(parts);
+  assert.deepStrictEqual(packedValues(merged.find(s => s.kind === 'vector')).toArray(), cv.toArray());
+  assert.deepStrictEqual(packedValues(merged.find(s => s.kind === 'string')).toArray(), packedValues(str).toArray());
 });

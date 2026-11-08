@@ -25,10 +25,10 @@ if (workerData && workerData.scan) {
     try {
       const signals = X.scanRanges(reader, workerData.ids, m.want, m.ranges);
       const transfer = [];
-      for (const s of signals) { transfer.push(s.times.buffer); if (s.codes) transfer.push(s.codes.buffer); if (s.reals) transfer.push(s.reals.buffer); }
+      for (const s of signals) { transfer.push(s.times.buffer); if (s.codes) transfer.push(s.codes.buffer); if (s.reals) transfer.push(s.reals.buffer); if (s.vbytes) transfer.push(s.vbytes.buffer, s.vends.buffer); }
       parentPort.postMessage({ job: m.job, signals }, transfer);
     } catch (e) {
-      parentPort.postMessage({ job: m.job, error: e.message || String(e) });
+      parentPort.postMessage({ job: m.job, error: e.message || String(e), code: e.code });
     }
   });
 } else {
@@ -66,7 +66,7 @@ function main() {
 
   const runPart = (w, want, ranges) => new Promise((resolve, reject) => {
     const job = ++jobSeq;
-    jobs.set(job, m => (m.error ? reject(new Error(m.error)) : resolve(m.signals)));
+    jobs.set(job, m => (m.error ? reject(Object.assign(new Error(m.error), { code: m.code })) : resolve(m.signals)));
     w.postMessage({ job, want, ranges });
   });
 
@@ -87,7 +87,7 @@ function main() {
     clearTimeout(idleTimer);
     idleTimer = setTimeout(() => { if (pool) { for (const w of pool) w.terminate(); pool = null; } }, 60000);
     const transfer = [];
-    for (const s of signals) { transfer.push(s.times.buffer); if (s.codes) transfer.push(s.codes.buffer); if (s.reals) transfer.push(s.reals.buffer); }
+    for (const s of signals) { transfer.push(s.times.buffer); if (s.codes) transfer.push(s.codes.buffer); if (s.reals) transfer.push(s.reals.buffer); if (s.vbytes) transfer.push(s.vbytes.buffer, s.vends.buffer); }
     parentPort.postMessage({ type: 'loaded', reqId: m.reqId, signals, ms: Date.now() - t0, bytes, threads: p ? p.length : 1 }, transfer);
   }
 

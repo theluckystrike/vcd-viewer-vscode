@@ -169,7 +169,7 @@ function rowData(r) {
   const valOf = (p, i, w) => {
     if (i < 0) return 'x'.repeat(w);
     if (p.codes) return F.CODE_CHARS[p.codes[i]];
-    if (p.values) return F.extend(String(p.values[i]), w);
+    if (p.values) return F.extend(String(p.values.at(i)), w);
     return 'x'.repeat(w);
   };
   for (;;) {
@@ -195,15 +195,15 @@ function rawAt(r, t) {
   if (i < 0) return { i, raw: null };
   if (d.codes) return { i, raw: F.CODE_CHARS[d.codes[i]] };
   if (d.reals) return { i, raw: d.reals[i] };
-  return { i, raw: d.values[i] };
+  return { i, raw: d.values.at(i) };
 }
 
 function fmtValue(r, d, i) {
   if (i < 0 || !d) return '';
   if (d.codes) return F.CODE_CHARS[d.codes[i]];
   if (d.reals) return F.formatReal(d.reals[i]);
-  if (d.kind === 'string') return String(d.values[i]);
-  const raw = String(d.values[i]);
+  if (d.kind === 'string') return String(d.values.at(i));
+  const raw = String(d.values.at(i));
   const key = i;
   if (!r.fcache || r.fcacheRadix !== r.radix || r.fcacheData !== d) { r.fcache = new Map(); r.fcacheRadix = r.radix; r.fcacheData = d; }
   let s = r.fcache.get(key);
@@ -453,7 +453,7 @@ function drawBus(ctx, r, d, y, w, charW) {
   walk(d.times, w, (i, xs, xe) => {
     if (i < 0) { ctx.strokeStyle = C.dim; ctx.globalAlpha = 0.4; ctx.beginPath(); ctx.moveTo(xs, mid); ctx.lineTo(xe, mid); ctx.stroke(); ctx.globalAlpha = 1; return; }
     let cls = 0;
-    if (d.values) { const raw = String(d.values[i]); cls = d.kind === 'string' ? 0 : F.valueClass(raw); }
+    if (d.values) { const raw = String(d.values.at(i)); cls = d.kind === 'string' ? 0 : F.valueClass(raw); }
     else if (d.reals && Number.isNaN(d.reals[i])) cls = 1;
     const color = cls === 1 ? C.x : cls === 2 ? C.z : C.bus;
     const s = Math.min(3, (xe - xs) / 2);
@@ -721,21 +721,32 @@ function buildTreeItems() {
     }
     return out;
   }
-  const walkScope = (s, depth) => {
-    const sc = H.scopes[s];
-    for (const c of sc.children) {
-      out.push({ t: 'scope', s: c, depth });
-      if (S.expanded.has(c)) walkScope(c, depth + 1);
+  // same order as a recursive walk (child scopes, each followed by its open subtree, then the scope's own
+  // signals), with an explicit stack so that thousands of nested scopes cannot overflow the call stack
+  const stack = [{ s: 0, depth: 0, i: 0 }];
+  while (stack.length) {
+    const f = stack[stack.length - 1];
+    const sc = H.scopes[f.s];
+    if (f.i < sc.children.length) {
+      const c = sc.children[f.i++];
+      out.push({ t: 'scope', s: c, depth: f.depth });
+      if (S.expanded.has(c)) stack.push({ s: c, depth: f.depth + 1, i: 0 });
+    } else {
+      for (const v of sc.vars) out.push({ t: 'var', v, depth: f.depth });
+      stack.pop();
     }
-    for (const v of sc.vars) out.push({ t: 'var', v, depth });
-  };
-  walkScope(0, 0);
+  }
   return out;
 }
-function scopeVarsDeep(s, out = []) {
-  const sc = S.header.scopes[s];
-  for (const v of sc.vars) out.push(v);
-  for (const c of sc.children) scopeVarsDeep(c, out);
+function scopeVarsDeep(s0, out = []) {
+  // depth first, same order as a recursive walk, but with an explicit stack: a file with 5,000 nested
+  // $scope blocks overflowed the call stack
+  const stack = [s0];
+  while (stack.length) {
+    const sc = S.header.scopes[stack.pop()];
+    for (const v of sc.vars) out.push(v);
+    for (let k = sc.children.length - 1; k >= 0; k--) stack.push(sc.children[k]);
+  }
   return out;
 }
 function renderTree() {
@@ -878,7 +889,7 @@ function edge(dir) {
   if (!d) return;
   const times = d.times;
   const t = S.cursor !== null ? S.cursor : S.view.t0;
-  const valAt = i => (i < 0 ? null : d.codes ? d.codes[i] : d.reals ? d.reals[i] : d.values[i]);
+  const valAt = i => (i < 0 ? null : d.codes ? d.codes[i] : d.reals ? d.reals[i] : d.values.at(i));
   const n = times.length;
   let target = null;
   if (dir > 0) {

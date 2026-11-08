@@ -2,7 +2,7 @@
   "name": "vcd-waveform-viewer",
   "displayName": "VCD Viewer & Waveform Viewer (Verilog, No Signal Limit)",
   "description": "VCD viewer and waveform viewer for Verilog, SystemVerilog and VHDL simulations. Free with no signal limit: signal tree with search, cursor and two markers, bus grouping, hex, binary, signed and ASCII radix, and VCD files of 1 GB and more. A GTKWave-style viewer inside VS Code that works offline.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "zovo",
   "license": "MIT",
   "icon": "icon.png",

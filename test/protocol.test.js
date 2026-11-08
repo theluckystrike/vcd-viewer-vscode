@@ -33,13 +33,14 @@ test('webview HTML: no network, scripts by nonce', () => {
 });
 test('pack and unpack keep every signal', () => {
   const { packSignals, unpackSignals } = require('../src/core/pack');
+  const { packStrings, packedValues } = require('../src/core/packed');
   const sigs = [];
   for (let i = 0; i < 300; i++) {
     const n = i % 7;
     const s = { id: i, kind: ['scalar', 'vector', 'real'][i % 3], size: i % 3 === 1 ? 8 : 1, times: Float64Array.from({ length: n }, (_, k) => k * 10 + i) };
     if (s.kind === 'scalar') s.codes = Uint8Array.from({ length: n }, (_, k) => k % 4);
     else if (s.kind === 'real') s.reals = Float64Array.from({ length: n }, (_, k) => k / 3);
-    else s.values = Array.from({ length: n }, (_, k) => k.toString(2));
+    else Object.assign(s, packStrings(Array.from({ length: n }, (_, k) => (k * 1000003 + i).toString(2))));
     sigs.push(s);
   }
   const back = unpackSignals(JSON.parse(JSON.stringify(packSignals(sigs), (k, v) => (ArrayBuffer.isView(v) ? Array.from(v) : v))));
@@ -48,6 +49,6 @@ test('pack and unpack keep every signal', () => {
     assert.deepStrictEqual(Array.from(back[i].times), Array.from(sigs[i].times));
     if (sigs[i].codes) assert.deepStrictEqual(Array.from(back[i].codes), Array.from(sigs[i].codes));
     if (sigs[i].reals) assert.deepStrictEqual(Array.from(back[i].reals), Array.from(sigs[i].reals));
-    if (sigs[i].values) assert.deepStrictEqual(back[i].values, sigs[i].values);
+    if (sigs[i].vbytes) assert.deepStrictEqual(back[i].values.toArray(), packedValues(sigs[i]).toArray());
   }
 });
