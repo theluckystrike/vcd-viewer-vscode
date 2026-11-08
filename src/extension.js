@@ -9,7 +9,7 @@ const { packSignals } = require('./core/pack');
 const { registerSupport, commandUris, showLinks } = require('./support');
 
 const VIEW_TYPE = 'vcdViewer.waveform';
-const EXT_ID = 'zovo.vcd-waveform-viewer';
+const EXT_ID = 'zovo.zovo-vcd-waveform-viewer';
 const LAYOUTS_KEY = 'vcdViewer.layouts.v1';
 const MAX_SAVED_FILES = 200;
 const MAX_NON_FILE_MB = 512;

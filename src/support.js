@@ -23,7 +23,7 @@ const FUNDING_LABELS = {
 };
 
 // This extension's Marketplace id. The footer's "Rate" link opens its review page; nothing asks for a rating.
-const SELF_ID = "zovo.vcd-waveform-viewer";
+const SELF_ID = "zovo.zovo-vcd-waveform-viewer";
 
 // [id, name, one line]. Live ones are on the Marketplace. Queued ones are not there yet: they open GitHub.
 const LIVE = [
@@ -199,7 +199,7 @@ const QUEUED = [
     "https://github.com/theluckystrike/svg-viewer-vscode"
   ],
   [
-    "zovo.vcd-waveform-viewer",
+    "zovo.zovo-vcd-waveform-viewer",
     "VCD Viewer & Waveform Viewer (Verilog, No Signal Limit)",
     "vCD viewer and waveform viewer for Verilog, SystemVerilog and VHDL simulations. Free with no signal limit: signal tree with search, cursor and two markers, bus grouping, hex, binary, signed and ASCII radix, and VCD files of 1 GB and more. A GTKWave-style viewer inside VS Code that works offline.",
     "https://github.com/theluckystrike/vcd-viewer-vscode"
