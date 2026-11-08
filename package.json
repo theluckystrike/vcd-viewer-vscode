@@ -1,0 +1,237 @@
+{
+  "name": "vcd-waveform-viewer",
+  "displayName": "VCD Viewer & Waveform Viewer (Verilog, No Signal Limit)",
+  "description": "VCD viewer and waveform viewer for Verilog, SystemVerilog and VHDL simulations. Free with no signal limit: signal tree with search, cursor and two markers, bus grouping, hex, binary, signed and ASCII radix, and VCD files of 1 GB and more. A GTKWave-style viewer inside VS Code that works offline.",
+  "version": "0.1.0",
+  "publisher": "zovo",
+  "license": "MIT",
+  "icon": "icon.png",
+  "galleryBanner": {
+    "color": "#14202B",
+    "theme": "dark"
+  },
+  "engines": {
+    "vscode": "^1.90.0",
+    "node": ">=18"
+  },
+  "categories": [
+    "Visualization",
+    "Other"
+  ],
+  "keywords": [
+    "vcd",
+    "vcd viewer",
+    "waveform",
+    "waveform viewer",
+    "wave viewer",
+    "verilog",
+    "systemverilog",
+    "vhdl",
+    "gtkwave",
+    "fpga",
+    "rtl",
+    "simulation",
+    "icarus",
+    "iverilog",
+    "verilator",
+    "vivado",
+    "ghdl",
+    "modelsim",
+    "digital logic",
+    "logic analyzer",
+    "value change dump",
+    "testbench",
+    "hdl",
+    "asic",
+    "offline"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true
+    },
+    "virtualWorkspaces": true
+  },
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "vcdViewer.waveform",
+        "displayName": "VCD Waveform Viewer",
+        "selector": [
+          {
+            "filenamePattern": "*.vcd"
+          }
+        ],
+        "priority": "default"
+      }
+    ],
+    "commands": [
+      {
+        "command": "vcdViewer.openWalkthrough",
+        "title": "Get Started",
+        "category": "VCD Waveform Viewer"
+      },
+      {
+        "command": "vcdViewer.openWith",
+        "title": "Open in VCD Waveform Viewer",
+        "category": "VCD Waveform Viewer"
+      },
+      {
+        "command": "vcdViewer.forgetSignalLists",
+        "title": "Forget Saved Signal Lists",
+        "category": "VCD Waveform Viewer"
+      },
+      {
+        "command": "vcdViewer.supportDeveloper",
+        "title": "Support the developer",
+        "category": "VCD Waveform Viewer"
+      },
+      {
+        "command": "vcdViewer.moreViewers",
+        "title": "More free viewers",
+        "category": "VCD Waveform Viewer"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "vcdViewer.openWith",
+          "when": "resourceExtname == .vcd",
+          "group": "navigation@9"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "vcdViewer.openWith",
+          "when": "false"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "VCD Waveform Viewer",
+      "properties": {
+        "vcdViewer.maxFileMB": {
+          "type": "number",
+          "default": 16384,
+          "minimum": 1,
+          "maximum": 1048576,
+          "description": "VCD files up to this size (in MB) are opened. The file is read in blocks, so large files do not need much memory. Larger files show a message."
+        },
+        "vcdViewer.defaultRadix": {
+          "type": "string",
+          "enum": [
+            "hex",
+            "bin",
+            "unsigned",
+            "signed",
+            "ascii"
+          ],
+          "default": "hex",
+          "description": "Radix for vector signals when you add them. Integer variables start as signed. You can change it per signal in the toolbar."
+        },
+        "vcdViewer.initialSignals": {
+          "type": "number",
+          "default": 64,
+          "minimum": 0,
+          "maximum": 5000,
+          "description": "How many signals to show when a file opens for the first time. Files larger than 200 MB start with at most 16. After that, the viewer remembers your own list per file."
+        },
+        "vcdViewer.autoReload": {
+          "type": "boolean",
+          "default": true,
+          "description": "Read the file again when the simulator writes it, and keep the signals, cursor and zoom."
+        },
+        "vcdViewer.rowHeight": {
+          "type": "string",
+          "enum": [
+            "compact",
+            "normal",
+            "large"
+          ],
+          "default": "normal",
+          "description": "Height of each signal row in files you open next."
+        },
+        "vcdViewer.askForRating": {
+          "type": "boolean",
+          "default": true,
+          "description": "Ask one time for a Marketplace rating after you have used VCD Waveform Viewer on a few files on different days. You can answer \"Later\" or \"No thanks\". Nothing is sent anywhere."
+        },
+        "vcdViewer.showSupportLinks": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the small Sponsor and More free viewers links in the status line of the viewer. The change shows in files you open next. Nothing is sent anywhere."
+        }
+      }
+    },
+    "walkthroughs": [
+      {
+        "id": "vcdViewer.start",
+        "title": "Get started with VCD Waveform Viewer",
+        "description": "Look at VCD waveforms from Icarus, Verilator, Vivado, ModelSim and GHDL without leaving VS Code.",
+        "steps": [
+          {
+            "id": "open",
+            "title": "Open a VCD file",
+            "description": "Click a .vcd file in the Explorer. The first signals of the file show right away. Double-click more signals in the tree on the left, or press + next to a scope to add all of its signals. There is no signal limit.\n[Find a VCD file](command:workbench.action.quickOpen?%5B%22.vcd%22%5D)",
+            "media": {
+              "image": "images/readme-axi-dark.png",
+              "altText": "An AXI-Lite bus VCD in VCD Waveform Viewer with the signal tree, the waveforms, the cursor and two markers."
+            },
+            "completionEvents": [
+              "onCommand:workbench.action.quickOpen"
+            ]
+          },
+          {
+            "id": "navigate",
+            "title": "Zoom, cursor and markers",
+            "description": "Ctrl or Cmd + wheel zooms at the mouse. Drag to pan, Shift+drag to zoom to a range. Click to place the cursor; A and B put the markers there. Arrow keys jump to the next or previous change of the selected signal.",
+            "media": {
+              "markdown": "walkthrough/navigate.md"
+            }
+          },
+          {
+            "id": "organize",
+            "title": "Radix, buses and names",
+            "description": "Pick hex, binary, unsigned, signed or ASCII for each signal. Select several bit signals and press Bus to see them as one value. Double-click a name to rename it. Drag rows to reorder them.",
+            "media": {
+              "markdown": "walkthrough/organize.md"
+            }
+          },
+          {
+            "id": "settings",
+            "title": "Signal lists and settings",
+            "description": "Your signal list is kept per file and comes back when you open the file again or when the simulator writes it again. Export saves it as JSON for your team.\n[Open settings](command:workbench.action.openSettings?%5B%22vcdViewer%22%5D)",
+            "media": {
+              "markdown": "walkthrough/settings.md"
+            },
+            "completionEvents": [
+              "onCommand:workbench.action.openSettings"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "node scripts/build.js --production",
+    "build": "node scripts/build.js --production",
+    "test": "node scripts/build.js --production && node --test \"test/*.test.js\"",
+    "samples": "python3 -I scripts/make_samples.py samples",
+    "package": "npx -y @vscode/vsce package --no-dependencies -o dist/"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  },
+  "homepage": "https://github.com/theluckystrike/vcd-viewer-vscode#readme",
+  "bugs": {
+    "url": "https://github.com/theluckystrike/vcd-viewer-vscode/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/theluckystrike/vcd-viewer-vscode"
+  },
+  "sponsor": {
+    "url": "https://github.com/sponsors/theluckystrike"
+  }
+}

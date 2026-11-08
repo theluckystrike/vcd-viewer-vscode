@@ -1,0 +1,16 @@
+src/**
+test/**
+scripts/**
+samples/**
+hdl/**
+node_modules/**
+e2e-tmp/**
+**/*.map
+icon.svg
+.gitignore
+dist/*.vsix
+*.vsix
+package-lock.json
+.github/**
+images/**
+!images/readme-axi-dark.png
