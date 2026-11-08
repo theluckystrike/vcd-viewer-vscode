@@ -7,6 +7,7 @@ const { Worker, parentPort, workerData } = require('worker_threads');
 const fs = require('fs');
 const os = require('os');
 const X = require('./core/indexer');
+const { packSignals } = require('./core/pack');
 
 const PARALLEL_MIN_BYTES = 48 * 1024 * 1024;
 
@@ -86,9 +87,11 @@ function main() {
     }
     clearTimeout(idleTimer);
     idleTimer = setTimeout(() => { if (pool) { for (const w of pool) w.terminate(); pool = null; } }, 60000);
-    const transfer = [];
-    for (const s of signals) { transfer.push(s.times.buffer); if (s.codes) transfer.push(s.codes.buffer); if (s.reals) transfer.push(s.reals.buffer); if (s.vbytes) transfer.push(s.vbytes.buffer, s.vends.buffer); }
-    parentPort.postMessage({ type: 'loaded', reqId: m.reqId, signals, ms: Date.now() - t0, bytes, threads: p ? p.length : 1 }, transfer);
+    // packed here, not in the extension host, so the host only forwards the buffers to the webview
+    const packed = packSignals(signals);
+    signals = null;
+    parentPort.postMessage({ type: 'loaded', reqId: m.reqId, packed, ms: Date.now() - t0, bytes, threads: p ? p.length : 1 },
+      [packed.times.buffer, packed.codes.buffer, packed.reals.buffer, packed.vbytes.buffer, packed.vends.buffer]);
   }
 
   // Loads run one after another, in the order they were asked for.

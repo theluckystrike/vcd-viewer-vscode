@@ -5,7 +5,6 @@ const { Worker } = require('worker_threads');
 const { buildHtml } = require('./html');
 const { validateWebviewMessage, sizePlan, fmtSize } = require('./core/protocol');
 const { createRatingPrompt } = require('./rate');
-const { packSignals } = require('./core/pack');
 const { registerSupport, commandUris, showLinks } = require('./support');
 
 const VIEW_TYPE = 'vcdViewer.waveform';
@@ -105,11 +104,6 @@ class VcdEditorProvider {
       w.on('message', m => {
         if (w !== worker) return;
         if (m.type === 'error' && !m.reqId) onFail();
-        if (m.type === 'loaded') {
-          const { signals, ...rest } = m;
-          post({ ...rest, packed: packSignals(signals) });
-          return;
-        }
         post(m);
       });
       w.on('error', e => {
