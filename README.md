@@ -15,6 +15,13 @@ Click a `.vcd` file from Icarus Verilog, Verilator, Vivado, ModelSim or GHDL and
 - Scrolling works the way you expect. The wheel scrolls the signal list. Shift+wheel, a trackpad swipe, a drag or the bar under the waves moves through time. Ctrl or Cmd+wheel zooms at the mouse.
 - Large files open fast. A 1.07 GB VCD with 20,000 signals showed its first waves after 4.3 s. A signal that changes now and then appeared 0.06 s after you added it, and one that changes all the time in 0.73 s. The file is never read into memory as a whole.
 
+## Teams and companies
+
+- Zovo Pro Team is the company licence: USD 59 once for a team of 5, one key, the Pro tools in every Zovo extension that has them. [See Zovo Pro Team](https://license.zovo.one/buy/zovo-pro-team?client_reference_id=readme-vcd)
+- Commercial use is allowed.
+- The key is checked on your computer, so it works offline. No account and no subscription.
+- Invoice with your company name and tax ID on request: support@zovo.one.
+
 ## Quick start
 
 1. Install VCD Viewer & Waveform Viewer.
